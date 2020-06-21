@@ -85,8 +85,6 @@ auc_r, f1_r, precision_r, recall_r = cal_auc_f1(true_label, y_pre)
 #reformer+detector
 y_pred_passed, y_true_passed, y_pre_passed = test(x_reformed[ind], true_label[ind], False)
 y_pred, y_true, y_pre = test(x_adv[unpassed_ind], true_label[unpassed_ind], False)
-y_pred = np.array([1-i for i in y_pred])
-y_pre = np.array([1-i for i in y_pre])
 acc_rd = accuracy_score(np.concatenate([y_pred_passed, y_pred]), np.concatenate([y_true_passed, y_true]))
 auc_rd, f1_rd, precision_rd, recall_rd = cal_auc_f1(np.concatenate([onehot(y_true_passed,2), onehot(y_true,2)]), np.concatenate([y_pre_passed, y_pre]))
 

@@ -317,9 +317,17 @@ def main(path, name):
     return validation_auc, validation_f1, validation_pre, validation_rec
 
 if __name__ == '__main__':
-    name = 'model_0208'
-    path =  "/Users/wendy/Documents/XiongLab/Data/processed-mimic3-mortality"
-    validation_auc, validation_f1, validation_pre, validation_rec = main(path, name)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name",
+                        default=None,
+                        type=str,
+                        required=True)
+    parser.add_argument("--data_path",
+                        default=0.9,
+                        type=float,
+                        required=True)
+    args = parser.parse_args()
+    validation_auc, validation_f1, validation_pre, validation_rec = main(data_path, model_name)
     print ("val_auc is:", validation_auc)
     print ("val_f1 is:", validation_f1)
     print ("val_pre is:", validation_pre)

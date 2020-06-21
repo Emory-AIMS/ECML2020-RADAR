@@ -14,13 +14,10 @@ from tpf_embedder.embedder import EMBEDDER
 BATCH_SIZE = 64
 MAX_TIMESTEP = 48
 FEATURE_DIM = 19
-LEARNING_RATE = 0.001
-alpha = 2
-beta = 10
 TEST_SIZE = 7504
 POS_SIZE = 4137
 NEG_SIZE = 33376
-def set_graph(embed_flag = False):
+def set_graph(args, embed_flag = False):
     reset_default_graph()
     vae = VAE_RNN.VAE(ENCODER_NUM_UNITS_l1 = 32,
                       ENCODER_NUM_UNITS_l2 = 64,
@@ -45,9 +42,9 @@ def set_graph(embed_flag = False):
         loss1 = vae.l2_loss(x_pl, out)
         loss2 = vae.reg_loss()
         loss3 = vae.l1_loss(x_pl, out)
-        loss = beta*loss1+loss2+alpha*loss3
+        loss = args.beta*loss1+loss2+args.alpha*loss3
     with tf.variable_scope('train'):
-        optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
+        optimizer = tf.train.AdamOptimizer(args.lr)
         train_op = optimizer.minimize(loss)
     return x_pl, loss1, loss2, loss3, loss, train_op, out, batch_pl
 
@@ -60,13 +57,13 @@ def get_batch(size, data):
 
     return batch_data
 
-def train(Iter, date):
-    x_pl, loss1, loss2, loss3, loss, train_op, out, batch_pl = set_graph(True)
+def train(args):
+    x_pl, loss1, loss2, loss3, loss, train_op, out, batch_pl = set_graph(args, True)
     X_pos, Y_pos, X_neg, Y_neg = load_data()
     X_pos_train, X_pos_test= train_test_split(X_pos, test_size = 0.2)
     X_neg_train, X_neg_test= train_test_split(X_neg, test_size = 0.2)
-    np.save("./vae_output/neg_clean_{}.npy".format(date), X_neg_test)
-    np.save("./vae_output/pos_clean_{}.npy".format(date), X_pos_test)
+    np.save("./vae_output/neg_clean_{}.npy".format(args.date), X_neg_test)
+    np.save("./vae_output/pos_clean_{}.npy".format(args.date), X_pos_test)
     print ("Saved test data")
     sess = tf.Session()
     init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -87,9 +84,9 @@ def train(Iter, date):
     min_loss3 = float("inf")
     min_loss = float("inf")
     count = 0
-    while( itr<Iter ):
+    while( itr<args.epochs ):
         sample_processed = 0
-        while(sample_processed < 50):
+        while(sample_processed < NEG_SIZE):
             pos_batch = get_batch(BATCH_SIZE, X_pos_train)
             neg_batch = get_batch(BATCH_SIZE/2, X_neg_train)
                 
@@ -117,7 +114,7 @@ def train(Iter, date):
             if loss1_out<min_loss1 :
                 saver = tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='vae'))
     
-                fn =  './vae_models' + '/model_{}'.format(date)+'/model'   
+                fn =  './vae_models' + '/model_{}'.format(args.date)+'/model'   
                 saver.save(sess, fn)
                 print('\n Saving model')
 
@@ -140,13 +137,30 @@ def train(Iter, date):
     return loss1_list_train, loss2_list_train, loss3_list_train, loss_list_train, loss1_list_test, loss2_list_test, loss3_list_test, loss_list_test
   
 
-def main(Iter, date):
+def main(args):
     loss1_list_train, loss2_list_train, loss3_list_train, loss_list_train, \
-    loss1_list_test, loss2_list_test, loss3_list_test, loss_list_test = train(Iter, date)
+    loss1_list_test, loss2_list_test, loss3_list_test, loss_list_test = train(args)
     return loss1_list_train, loss2_list_train, loss3_list_train, loss_list_train, loss1_list_test,loss2_list_test, loss3_list_test,  loss_list_test
 if __name__ == '__main__':
-    date = "0504"
-    loss1_list_train, loss2_list_train, loss3_list_train, loss_list_train, loss1_list_test,loss2_list_test, loss3_list_test,  loss_list_test = main(1, date)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--date",
+                        default=None,
+                        type=str,
+                        required=True)
+    parser.add_argument("--epochs",
+                        default=1000,
+                        type=int)
+    parser.add_argument('--alpha',
+                        type=float,
+                        default=1)
+    parser.add_argument('--beta',
+                        type=float,
+                        default=1)
+    parser.add_argument('--lr',
+                        type=float,
+                        default=1e-4)
+    args = parser.parse_args()
+    loss1_list_train, loss2_list_train, loss3_list_train, loss_list_train, loss1_list_test,loss2_list_test, loss3_list_test,  loss_list_test = main(args)
     np.savez("./vae_output/plotSources_{}_pos.npy".format(date), loss1_list_train, loss2_list_train, loss3_list_train, loss_list_train, loss1_list_test,loss2_list_test, loss3_list_test,  loss_list_test)
 
 
